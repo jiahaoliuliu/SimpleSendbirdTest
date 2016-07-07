@@ -1,0 +1,2 @@
+# SimpleSendbirdTest
+Testing Sendbird

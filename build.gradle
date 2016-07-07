@@ -15,6 +15,7 @@ buildscript {
 allprojects {
     repositories {
         jcenter()
+        maven { url "https://raw.githubusercontent.com/smilefam/SendBird-SDK-Android/master/" }
     }
 }
 

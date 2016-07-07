@@ -38,3 +38,6 @@ captures/
 
 # Keystore files
 *.jks
+
+# API Keys
+app/src/main/java/com/jiahaoliuliu/simplesendbirdtest/APIKeys.java

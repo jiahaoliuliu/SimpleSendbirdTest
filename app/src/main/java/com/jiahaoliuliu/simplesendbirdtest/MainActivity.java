@@ -217,10 +217,10 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.start_conversation_button:
                     Log.v(TAG, "Starting a new conversation");
                     if (userId.equals(XIAO_MI_ID)) {
-                        Log.v(TAG, " With Nexus");
+                        Log.v(TAG, " With Nexus " + NEXUS_ID);
                         SendBird.startMessaging(NEXUS_ID);
                     } else {
-                        Log.v(TAG, " With Xiaomi");
+                        Log.v(TAG, " With Xiaomi " + XIAO_MI_ID);
                         SendBird.startMessaging(XIAO_MI_ID);
                     }
                     break;

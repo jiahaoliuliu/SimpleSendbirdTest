@@ -31,9 +31,6 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
 
-    private static final String XIAO_MI_ID = "422AAB0BABBFDCD8649AA85484E956D04485D943";
-    private static final String NEXUS_ID = "B7B5D901A2402FF349196C36B4BC646E3201203F";
-
     // Internal variable
     private Context mContext;
     private String mUserId;
@@ -52,11 +49,8 @@ public class MainActivity extends AppCompatActivity {
         SendBird.init(mContext, APIKeys.SEND_BIRD_APP_ID);
         mUserId = generateDeviceUUID(mContext);
         Log.v(TAG, "The user id is " + mUserId);
-        if (mUserId.equals(XIAO_MI_ID)) {
-            SendBird.login(SendBird.LoginOption.build(XIAO_MI_ID).setUserName("Xiaomi").setGCMRegToken(""));
-        } else {
-            SendBird.login(SendBird.LoginOption.build(NEXUS_ID).setUserName("Nexus").setGCMRegToken(""));
-        }
+        String userName = "User-" + mUserId.substring(0, 5);
+        SendBird.login(SendBird.LoginOption.build(mUserId).setUserName(userName).setGCMRegToken(""));
 
         SendBird.registerNotificationHandler(new SendBirdNotificationHandler() {
             @Override
@@ -225,16 +219,7 @@ public class MainActivity extends AppCompatActivity {
         public void onClick(View view) {
             switch (view.getId()) {
                 case R.id.start_conversation_button:
-                    Log.v(TAG, "Starting a new conversation");
-                    if (mUserId.equals(XIAO_MI_ID)) {
-                        Log.v(TAG, " With Nexus " + NEXUS_ID);
-                        SendBird.startMessaging(NEXUS_ID);
-                    } else if (mUserId.equals(NEXUS_ID)) {
-                        Log.v(TAG, " With Xiaomi " + XIAO_MI_ID);
-                        SendBird.startMessaging(XIAO_MI_ID);
-                    } else {
-                        Log.e(TAG, "user id not recognized " + mUserId);
-                    }
+                    
                     break;
                 case R.id.chat_button:
                     Log.v(TAG, "Sending a new message");

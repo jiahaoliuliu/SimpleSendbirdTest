@@ -30,27 +30,16 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
+    public static final String INTENT_KEY_USER_ID = "UserId";
 
     // Internal variable
-    private Context mContext;
-    private String mUserId;
-
-    // Views
-    private Button mStartConversationButton;
     private Button mChatButton;
+    private String mReceiverId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        this.mContext = this;
-
-        SendBird.init(mContext, APIKeys.SEND_BIRD_APP_ID);
-        mUserId = generateDeviceUUID(mContext);
-        Log.v(TAG, "The user id is " + mUserId);
-        String userName = "User-" + mUserId.substring(0, 5);
-        SendBird.login(SendBird.LoginOption.build(mUserId).setUserName(userName).setGCMRegToken(""));
 
         SendBird.registerNotificationHandler(new SendBirdNotificationHandler() {
             @Override
@@ -205,12 +194,14 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
-        // Link the views
-        mStartConversationButton = (Button) findViewById(R.id.start_conversation_button);
-        mStartConversationButton.setOnClickListener(mOnClickListener);
-
         mChatButton = (Button) findViewById(R.id.chat_button);
         mChatButton.setOnClickListener(mOnClickListener);
+
+        // get the user Id
+        mReceiverId = getIntent().getExtras().getString(INTENT_KEY_USER_ID);
+        Log.v(TAG, "The receiver id is " + mReceiverId);
+
+        SendBird.startMessaging(mReceiverId);
     }
 
 
@@ -218,9 +209,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onClick(View view) {
             switch (view.getId()) {
-                case R.id.start_conversation_button:
-                    
-                    break;
                 case R.id.chat_button:
                     Log.v(TAG, "Sending a new message");
                     SendBird.send("Simple text");
@@ -228,32 +216,4 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
-
-
-    public String generateDeviceUUID(Context context) {
-        String serial = android.os.Build.SERIAL;
-        String androidID = Settings.Secure.ANDROID_ID;
-        String deviceUUID = serial + androidID;
-
-        /*
-         * SHA-1
-         */
-        MessageDigest digest;
-        byte[] result;
-        try {
-            digest = MessageDigest.getInstance("SHA-1");
-            result = digest.digest(deviceUUID.getBytes("UTF-8"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (byte b : result) {
-            sb.append(String.format("%02X", b));
-        }
-
-
-        return sb.toString();
-    }
 }

@@ -22,6 +22,7 @@ import com.sendbird.android.model.MessagingChannel;
 import com.sendbird.android.model.ReadStatus;
 import com.sendbird.android.model.SystemMessage;
 import com.sendbird.android.model.TypeStatus;
+import com.sendbird.android.shadow.com.google.gson.JsonObject;
 
 import java.security.MessageDigest;
 import java.util.List;
@@ -35,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Internal variable
     private Context mContext;
-    private String userId;
+    private String mUserId;
 
     // Views
     private Button mStartConversationButton;
@@ -48,10 +49,10 @@ public class MainActivity extends AppCompatActivity {
 
         this.mContext = this;
 
-        SendBird.init(mContext, APIKeys.SEND_BIRD_API);
-        userId = generateDeviceUUID(mContext);
-        Log.v(TAG, "The user id is " + userId);
-        if (userId.equals(XIAO_MI_ID)) {
+        SendBird.init(mContext, APIKeys.SEND_BIRD_APP_ID);
+        mUserId = generateDeviceUUID(mContext);
+        Log.v(TAG, "The user id is " + mUserId);
+        if (mUserId.equals(XIAO_MI_ID)) {
             SendBird.login(SendBird.LoginOption.build(XIAO_MI_ID).setUserName("Xiaomi").setGCMRegToken(""));
         } else {
             SendBird.login(SendBird.LoginOption.build(NEXUS_ID).setUserName("Nexus").setGCMRegToken(""));
@@ -60,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
         SendBird.registerNotificationHandler(new SendBirdNotificationHandler() {
             @Override
             public void onMessagingChannelUpdated(MessagingChannel messagingChannel) {
-                Log.v(TAG, "Messaging channel updated " + messagingChannel);
+                Log.v(TAG, "Messaging channel updated " + messagingChannel.getId());
             }
 
             @Override
@@ -72,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
         SendBird.setEventHandler(new SendBirdEventHandler() {
             @Override
             public void onConnect(Channel channel) {
-                Log.v(TAG, "Channel connected " + channel);
+                Log.v(TAG, "Channel connected " + channel.getId());
             }
 
             @Override
@@ -87,7 +88,16 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onMessageReceived(Message message) {
-                Log.v(TAG, "Message received " + message);
+                Log.v(TAG, "Message received :\n" +
+                        "\tSender Id" + message.getSenderId() + ",\n" +
+                        "\tSender name: " + message.getSenderName() + ",\n" +
+                        "\tSenderImageUrl: " + message.getSenderImageUrl() + ",\n" +
+                        "\tMessage Id: " + message.getMessageId() + ",\n" +
+                        "\tMessage:" + message.getMessage() + ",\n" +
+                        "\tData: " + message.getData() + ",\n" +
+                        "\tTmp Id: " + message.getTempId() + ",\n" +
+                        "\tChannel Id: " + message.getChannelId() + ",\n" +
+                        "\tTimeStamp Id: " + message.getTimestamp() + ",\n");
             }
 
             @Override
@@ -123,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onMutedFileReceived(FileLink fileLink) {
-
+                Log.v(TAG, "Muted file received " + fileLink);
             }
 
             @Override
@@ -153,13 +163,13 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onMessagingStarted(final MessagingChannel messagingChannel) {
-                Log.v(TAG, "Message started " + messagingChannel);
+                Log.v(TAG, "Message started " + messagingChannel.getId());
 
                 SendBird.queryMessageList(messagingChannel.getUrl()).load(Long.MAX_VALUE, 30, 10, new MessageListQuery.MessageListQueryResult() {
                     @Override
                     public void onResult(List<MessageModel> messageModels) {
                         for (MessageModel model : messageModels) {
-                            Log.v(TAG, "Message model " + model);
+                            Log.v(TAG, "Message model " + model.getMessageId());
                         }
 
                         SendBird.markAsRead(messagingChannel.getUrl());
@@ -216,12 +226,14 @@ public class MainActivity extends AppCompatActivity {
             switch (view.getId()) {
                 case R.id.start_conversation_button:
                     Log.v(TAG, "Starting a new conversation");
-                    if (userId.equals(XIAO_MI_ID)) {
+                    if (mUserId.equals(XIAO_MI_ID)) {
                         Log.v(TAG, " With Nexus " + NEXUS_ID);
                         SendBird.startMessaging(NEXUS_ID);
-                    } else {
+                    } else if (mUserId.equals(NEXUS_ID)) {
                         Log.v(TAG, " With Xiaomi " + XIAO_MI_ID);
                         SendBird.startMessaging(XIAO_MI_ID);
+                    } else {
+                        Log.e(TAG, "user id not recognized " + mUserId);
                     }
                     break;
                 case R.id.chat_button:

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
@@ -29,6 +30,7 @@ import com.sendbird.android.model.TypeStatus;
 import com.sendbird.android.shadow.com.google.gson.JsonObject;
 
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -45,6 +47,9 @@ public class MainActivity extends AppCompatActivity {
     // Internal variable
     private String mReceiverId;
     private String mReceiverName;
+    private List<Message> mMessagesLit;
+    private RecyclerView.LayoutManager mLayoutManager;
+    private MessagesListAdapter mMessagesListAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
         mReceiverName = getIntent().getExtras().getString(INTENT_KEY_USER_NAME);
         Log.v(TAG, "The receiver is " + mReceiverId + ":" + mReceiverName);
 
+        // Initialize internal variables
+        mMessagesLit = new ArrayList<Message>();
+
         // Link the views
         mMessagesRecyclerView = (RecyclerView) findViewById(R.id.messages_recycler_view);
         mMessageBoxEditText = (EditText) findViewById(R.id.messages_box_edit_text);
@@ -67,6 +75,10 @@ public class MainActivity extends AppCompatActivity {
 
         // Set the name of the receiver
         getSupportActionBar().setTitle(mReceiverName);
+
+        // Set the messages list layout
+        mLayoutManager = new LinearLayoutManager(this);
+        mMessagesRecyclerView.setLayoutManager(mLayoutManager);
 
         // Start messaging
         SendBird.startMessaging(mReceiverId);
@@ -81,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
                     if (!TextUtils.isEmpty(textToSend)) {
                         SendBird.send(textToSend);
                         Log.v(TAG, "Sending message to " + mReceiverName + ":" + textToSend);
+                        mMessageBoxEditText.setText("");
                     }
                     break;
             }
@@ -104,6 +117,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onConnect(Channel channel) {
                 Log.v(TAG, "Channel connected " + channel.getId());
+
+                mMessagesListAdapter = new MessagesListAdapter(SendBird.getUserId(), mMessagesLit);
+                mMessagesRecyclerView.setAdapter(mMessagesListAdapter);
             }
 
             @Override
@@ -128,6 +144,9 @@ public class MainActivity extends AppCompatActivity {
                         "\tTmp Id: " + message.getTempId() + ",\n" +
                         "\tChannel Id: " + message.getChannelId() + ",\n" +
                         "\tTimeStamp Id: " + message.getTimestamp() + ",\n");
+
+                mMessagesLit.add(message);
+                mMessagesListAdapter.notifyDataSetChanged();
             }
 
             @Override
@@ -201,6 +220,8 @@ public class MainActivity extends AppCompatActivity {
                         for (MessageModel model : messageModels) {
                             Log.v(TAG, "Message model " + model.getMessageId());
                         }
+
+                        // TODO: Get old messages from the chanel
 
                         SendBird.markAsRead(messagingChannel.getUrl());
                         SendBird.join(messagingChannel.getUrl());

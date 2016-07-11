@@ -30,33 +30,18 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
-
-    private static final String XIAO_MI_ID = "422AAB0BABBFDCD8649AA85484E956D04485D943";
-    private static final String NEXUS_ID = "B7B5D901A2402FF349196C36B4BC646E3201203F";
+    public static final String INTENT_KEY_USER_ID = "UserId";
+    public static final String INTENT_KEY_USER_NAME = "UserName";
 
     // Internal variable
-    private Context mContext;
-    private String mUserId;
-
-    // Views
-    private Button mStartConversationButton;
     private Button mChatButton;
+    private String mReceiverId;
+    private String mReceiverName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        this.mContext = this;
-
-        SendBird.init(mContext, APIKeys.SEND_BIRD_APP_ID);
-        mUserId = generateDeviceUUID(mContext);
-        Log.v(TAG, "The user id is " + mUserId);
-        if (mUserId.equals(XIAO_MI_ID)) {
-            SendBird.login(SendBird.LoginOption.build(XIAO_MI_ID).setUserName("Xiaomi").setGCMRegToken(""));
-        } else {
-            SendBird.login(SendBird.LoginOption.build(NEXUS_ID).setUserName("Nexus").setGCMRegToken(""));
-        }
 
         SendBird.registerNotificationHandler(new SendBirdNotificationHandler() {
             @Override
@@ -211,12 +196,15 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
-        // Link the views
-        mStartConversationButton = (Button) findViewById(R.id.start_conversation_button);
-        mStartConversationButton.setOnClickListener(mOnClickListener);
-
         mChatButton = (Button) findViewById(R.id.chat_button);
         mChatButton.setOnClickListener(mOnClickListener);
+
+        // get the user Id
+        mReceiverId = getIntent().getExtras().getString(INTENT_KEY_USER_ID);
+        mReceiverName = getIntent().getExtras().getString(INTENT_KEY_USER_NAME);
+        Log.v(TAG, "The receiver is " + mReceiverId + ":" + mReceiverName);
+
+        SendBird.startMessaging(mReceiverId);
     }
 
 
@@ -224,18 +212,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onClick(View view) {
             switch (view.getId()) {
-                case R.id.start_conversation_button:
-                    Log.v(TAG, "Starting a new conversation");
-                    if (mUserId.equals(XIAO_MI_ID)) {
-                        Log.v(TAG, " With Nexus " + NEXUS_ID);
-                        SendBird.startMessaging(NEXUS_ID);
-                    } else if (mUserId.equals(NEXUS_ID)) {
-                        Log.v(TAG, " With Xiaomi " + XIAO_MI_ID);
-                        SendBird.startMessaging(XIAO_MI_ID);
-                    } else {
-                        Log.e(TAG, "user id not recognized " + mUserId);
-                    }
-                    break;
                 case R.id.chat_button:
                     Log.v(TAG, "Sending a new message");
                     SendBird.send("Simple text");
@@ -243,32 +219,4 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
-
-
-    public String generateDeviceUUID(Context context) {
-        String serial = android.os.Build.SERIAL;
-        String androidID = Settings.Secure.ANDROID_ID;
-        String deviceUUID = serial + androidID;
-
-        /*
-         * SHA-1
-         */
-        MessageDigest digest;
-        byte[] result;
-        try {
-            digest = MessageDigest.getInstance("SHA-1");
-            result = digest.digest(deviceUUID.getBytes("UTF-8"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (byte b : result) {
-            sb.append(String.format("%02X", b));
-        }
-
-
-        return sb.toString();
-    }
 }

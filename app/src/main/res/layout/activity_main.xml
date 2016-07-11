@@ -11,15 +11,6 @@
     android:orientation="vertical"
     >
 
-    <!-- Start conversation button -->
-    <Button
-        android:id="@+id/start_conversation_button"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:text="Start conversation"
-        />
-
     <!-- Chat button -->
     <Button
         android:id="@+id/chat_button"

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -36,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String INTENT_KEY_USER_NAME = "UserName";
 
     // Views
-    private ListView mMessagesListView;
+    private RecyclerView mMessagesRecyclerView;
     private EditText mMessageBoxEditText;
     private Button mViewButton;
 
@@ -57,12 +58,16 @@ public class MainActivity extends AppCompatActivity {
         Log.v(TAG, "The receiver is " + mReceiverId + ":" + mReceiverName);
 
         // Link the views
-        mMessagesListView = (ListView) findViewById(R.id.messages_list_view);
+        mMessagesRecyclerView = (RecyclerView) findViewById(R.id.messages_recycler_view);
         mMessageBoxEditText = (EditText) findViewById(R.id.messages_box_edit_text);
 
         mViewButton = (Button) findViewById(R.id.send_button);
         mViewButton.setOnClickListener(mOnClickListener);
 
+        // Set the name of the receiver
+        getSupportActionBar().setTitle(mReceiverName);
+
+        // Start messaging
         SendBird.startMessaging(mReceiverId);
     }
 

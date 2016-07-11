@@ -31,10 +31,12 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     public static final String INTENT_KEY_USER_ID = "UserId";
+    public static final String INTENT_KEY_USER_NAME = "UserName";
 
     // Internal variable
     private Button mChatButton;
     private String mReceiverId;
+    private String mReceiverName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -199,7 +201,8 @@ public class MainActivity extends AppCompatActivity {
 
         // get the user Id
         mReceiverId = getIntent().getExtras().getString(INTENT_KEY_USER_ID);
-        Log.v(TAG, "The receiver id is " + mReceiverId);
+        mReceiverName = getIntent().getExtras().getString(INTENT_KEY_USER_NAME);
+        Log.v(TAG, "The receiver is " + mReceiverId + ":" + mReceiverName);
 
         SendBird.startMessaging(mReceiverId);
     }

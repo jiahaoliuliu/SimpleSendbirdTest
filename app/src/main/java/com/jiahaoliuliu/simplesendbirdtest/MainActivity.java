@@ -5,6 +5,7 @@ import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -71,14 +72,16 @@ public class MainActivity extends AppCompatActivity {
         SendBird.startMessaging(mReceiverId);
     }
 
-
     private View.OnClickListener mOnClickListener = new View.OnClickListener(){
         @Override
         public void onClick(View view) {
             switch (view.getId()) {
                 case R.id.send_button:
-                    Log.v(TAG, "Sending a new message");
-                    SendBird.send("Simple text");
+                    String textToSend = mMessageBoxEditText.getText().toString().trim();
+                    if (!TextUtils.isEmpty(textToSend)) {
+                        SendBird.send(textToSend);
+                        Log.v(TAG, "Sending message to " + mReceiverName + ":" + textToSend);
+                    }
                     break;
             }
         }

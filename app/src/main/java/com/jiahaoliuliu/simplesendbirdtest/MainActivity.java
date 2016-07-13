@@ -1,7 +1,5 @@
 package com.jiahaoliuliu.simplesendbirdtest;
 
-import android.content.Context;
-import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -11,7 +9,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ListView;
 
 import com.sendbird.android.MessageListQuery;
 import com.sendbird.android.SendBird;
@@ -27,9 +24,7 @@ import com.sendbird.android.model.MessagingChannel;
 import com.sendbird.android.model.ReadStatus;
 import com.sendbird.android.model.SystemMessage;
 import com.sendbird.android.model.TypeStatus;
-import com.sendbird.android.shadow.com.google.gson.JsonObject;
 
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -117,9 +112,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onConnect(Channel channel) {
                 Log.v(TAG, "Channel connected " + channel.getId());
-
-                mMessagesListAdapter = new MessagesListAdapter(SendBird.getUserId(), mMessagesLit);
-                mMessagesRecyclerView.setAdapter(mMessagesListAdapter);
             }
 
             @Override
@@ -145,8 +137,9 @@ public class MainActivity extends AppCompatActivity {
                         "\tChannel Id: " + message.getChannelId() + ",\n" +
                         "\tTimeStamp Id: " + message.getTimestamp() + ",\n");
 
-                mMessagesLit.add(message);
-                mMessagesListAdapter.notifyDataSetChanged();
+                mMessagesListAdapter.addMessage(message);
+                // Move the list to the last item
+                mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
             }
 
             @Override
@@ -214,14 +207,25 @@ public class MainActivity extends AppCompatActivity {
             public void onMessagingStarted(final MessagingChannel messagingChannel) {
                 Log.v(TAG, "Message started " + messagingChannel.getId());
 
+                mMessagesListAdapter = new MessagesListAdapter(SendBird.getUserId(), mMessagesLit);
+                mMessagesRecyclerView.setAdapter(mMessagesListAdapter);
+
                 SendBird.queryMessageList(messagingChannel.getUrl()).load(Long.MAX_VALUE, 30, 10, new MessageListQuery.MessageListQueryResult() {
                     @Override
                     public void onResult(List<MessageModel> messageModels) {
                         for (MessageModel model : messageModels) {
                             Log.v(TAG, "Message model " + model.getMessageId());
-                        }
+                            if (model instanceof Message) {
+                                Log.v(TAG, "The message model is also instance of Message" + model.getMessageId());
+                                mMessagesListAdapter.addMessage((Message) model);
 
-                        // TODO: Get old messages from the chanel
+                                // Move the list to the last item
+                                mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
+                            } else {
+                                Log.v(TAG, "The message model is not instance of Message " + model.getMessageId());
+                            }
+
+                        }
 
                         SendBird.markAsRead(messagingChannel.getUrl());
                         SendBird.join(messagingChannel.getUrl());

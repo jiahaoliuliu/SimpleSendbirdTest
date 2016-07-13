@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.sendbird.android.model.Message;
+import com.sendbird.android.model.MessageModel;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -16,11 +17,6 @@ import java.util.List;
  * Created by jiahaoliuliu on 7/11/16.
  */
 public class MessagesListAdapter extends RecyclerView.Adapter<MessagesListAdapter.ViewHolder> {
-
-    @Override
-    public int getItemCount() {
-        return mMessagesList.size();
-    }
 
     // View holder for the view
     public static class ViewHolder extends RecyclerView.ViewHolder {
@@ -62,6 +58,11 @@ public class MessagesListAdapter extends RecyclerView.Adapter<MessagesListAdapte
     }
 
     @Override
+    public int getItemCount() {
+        return mMessagesList.size();
+    }
+
+    @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         int layoutId;
         switch (viewType) {
@@ -86,5 +87,15 @@ public class MessagesListAdapter extends RecyclerView.Adapter<MessagesListAdapte
         Message message = mMessagesList.get(position);
         holder.mMessagesTextView.setText(message.getMessage());
         holder.mDateTextView.setText(mDateFormatter.format(new Date(message.getTimestamp())));
+    }
+
+    public void addMessage(Message message) {
+        if (message.isPast()) {
+            mMessagesList.add(0, message);
+        } else {
+            mMessagesList.add(message);
+        }
+
+        notifyDataSetChanged();
     }
 }

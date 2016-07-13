@@ -218,14 +218,13 @@ public class MainActivity extends AppCompatActivity {
                             if (model instanceof Message) {
                                 Log.v(TAG, "The message model is also instance of Message" + model.getMessageId());
                                 mMessagesListAdapter.addMessage((Message) model);
-
-                                // Move the list to the last item
-                                mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
                             } else {
                                 Log.v(TAG, "The message model is not instance of Message " + model.getMessageId());
                             }
-
                         }
+
+                        // Move the list to the last item
+                        mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
 
                         SendBird.markAsRead(messagingChannel.getUrl());
                         SendBird.join(messagingChannel.getUrl());

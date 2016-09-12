@@ -1,12 +1,14 @@
 package com.jiahaoliuliu.simplesendbirdtest;
 
-import android.content.Context;
-import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 
 import com.sendbird.android.MessageListQuery;
 import com.sendbird.android.SendBird;
@@ -22,9 +24,8 @@ import com.sendbird.android.model.MessagingChannel;
 import com.sendbird.android.model.ReadStatus;
 import com.sendbird.android.model.SystemMessage;
 import com.sendbird.android.model.TypeStatus;
-import com.sendbird.android.shadow.com.google.gson.JsonObject;
 
-import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -33,16 +34,68 @@ public class MainActivity extends AppCompatActivity {
     public static final String INTENT_KEY_USER_ID = "UserId";
     public static final String INTENT_KEY_USER_NAME = "UserName";
 
+    // Views
+    private RecyclerView mMessagesRecyclerView;
+    private EditText mMessageBoxEditText;
+    private Button mViewButton;
+
     // Internal variable
-    private Button mChatButton;
     private String mReceiverId;
     private String mReceiverName;
+    private List<Message> mMessagesLit;
+    private RecyclerView.LayoutManager mLayoutManager;
+    private MessagesListAdapter mMessagesListAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        registerNotificationsAndEvents();
+
+        // get the user Id
+        mReceiverId = getIntent().getExtras().getString(INTENT_KEY_USER_ID);
+        mReceiverName = getIntent().getExtras().getString(INTENT_KEY_USER_NAME);
+        Log.v(TAG, "The receiver is " + mReceiverId + ":" + mReceiverName);
+
+        // Initialize internal variables
+        mMessagesLit = new ArrayList<Message>();
+
+        // Link the views
+        mMessagesRecyclerView = (RecyclerView) findViewById(R.id.messages_recycler_view);
+        mMessageBoxEditText = (EditText) findViewById(R.id.messages_box_edit_text);
+
+        mViewButton = (Button) findViewById(R.id.send_button);
+        mViewButton.setOnClickListener(mOnClickListener);
+
+        // Set the name of the receiver
+        getSupportActionBar().setTitle(mReceiverName);
+
+        // Set the messages list layout
+        mLayoutManager = new LinearLayoutManager(this);
+        mMessagesRecyclerView.setLayoutManager(mLayoutManager);
+
+        // Start messaging
+        SendBird.startMessaging(mReceiverId);
+    }
+
+    private View.OnClickListener mOnClickListener = new View.OnClickListener(){
+        @Override
+        public void onClick(View view) {
+            switch (view.getId()) {
+                case R.id.send_button:
+                    String textToSend = mMessageBoxEditText.getText().toString().trim();
+                    if (!TextUtils.isEmpty(textToSend)) {
+                        SendBird.send(textToSend);
+                        Log.v(TAG, "Sending message to " + mReceiverName + ":" + textToSend);
+                        mMessageBoxEditText.setText("");
+                    }
+                    break;
+            }
+        }
+    };
+
+    private void registerNotificationsAndEvents() {
         SendBird.registerNotificationHandler(new SendBirdNotificationHandler() {
             @Override
             public void onMessagingChannelUpdated(MessagingChannel messagingChannel) {
@@ -83,6 +136,10 @@ public class MainActivity extends AppCompatActivity {
                         "\tTmp Id: " + message.getTempId() + ",\n" +
                         "\tChannel Id: " + message.getChannelId() + ",\n" +
                         "\tTimeStamp Id: " + message.getTimestamp() + ",\n");
+
+                mMessagesListAdapter.addMessage(message);
+                // Move the list to the last item
+                mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
             }
 
             @Override
@@ -150,12 +207,24 @@ public class MainActivity extends AppCompatActivity {
             public void onMessagingStarted(final MessagingChannel messagingChannel) {
                 Log.v(TAG, "Message started " + messagingChannel.getId());
 
+                mMessagesListAdapter = new MessagesListAdapter(SendBird.getUserId(), mMessagesLit);
+                mMessagesRecyclerView.setAdapter(mMessagesListAdapter);
+
                 SendBird.queryMessageList(messagingChannel.getUrl()).load(Long.MAX_VALUE, 30, 10, new MessageListQuery.MessageListQueryResult() {
                     @Override
                     public void onResult(List<MessageModel> messageModels) {
                         for (MessageModel model : messageModels) {
                             Log.v(TAG, "Message model " + model.getMessageId());
+                            if (model instanceof Message) {
+                                Log.v(TAG, "The message model is also instance of Message" + model.getMessageId());
+                                mMessagesListAdapter.addMessage((Message) model);
+                            } else {
+                                Log.v(TAG, "The message model is not instance of Message " + model.getMessageId());
+                            }
                         }
+
+                        // Move the list to the last item
+                        mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
 
                         SendBird.markAsRead(messagingChannel.getUrl());
                         SendBird.join(messagingChannel.getUrl());
@@ -193,30 +262,6 @@ public class MainActivity extends AppCompatActivity {
             public void onAllMessagingHidden() {
                 Log.v(TAG, "All messaging hidden ");
             }
-
         });
-
-        mChatButton = (Button) findViewById(R.id.chat_button);
-        mChatButton.setOnClickListener(mOnClickListener);
-
-        // get the user Id
-        mReceiverId = getIntent().getExtras().getString(INTENT_KEY_USER_ID);
-        mReceiverName = getIntent().getExtras().getString(INTENT_KEY_USER_NAME);
-        Log.v(TAG, "The receiver is " + mReceiverId + ":" + mReceiverName);
-
-        SendBird.startMessaging(mReceiverId);
     }
-
-
-    private View.OnClickListener mOnClickListener = new View.OnClickListener(){
-        @Override
-        public void onClick(View view) {
-            switch (view.getId()) {
-                case R.id.chat_button:
-                    Log.v(TAG, "Sending a new message");
-                    SendBird.send("Simple text");
-                    break;
-            }
-        }
-    };
 }

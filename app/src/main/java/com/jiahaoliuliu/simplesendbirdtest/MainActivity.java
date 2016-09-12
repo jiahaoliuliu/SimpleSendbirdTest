@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.sendbird.android.BaseChannel;
 import com.sendbird.android.BaseMessage;
 import com.sendbird.android.GroupChannel;
 import com.sendbird.android.PreviousMessageListQuery;
@@ -20,6 +21,7 @@ import com.sendbird.android.SendBirdException;
 import com.sendbird.android.User;
 import com.sendbird.android.UserMessage;
 
+import java.security.acl.Group;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +30,9 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     public static final String INTENT_KEY_USER_ID = "UserId";
     public static final String INTENT_KEY_USER_NAME = "UserName";
+
+    // The unique identifier for the group channel handler
+    private static final String identifier = "SimpleSendbirdTest";
 
     // All the channels must be distinct. This will allow them to be reused and get previous messages
     private static final boolean IS_DISTINCT = true;
@@ -47,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     private List<UserMessage> mMessagesLit;
     private RecyclerView.LayoutManager mLayoutManager;
     private MessagesListAdapter mMessagesListAdapter;
+    private GroupChannel mGroupChannel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,6 +83,41 @@ public class MainActivity extends AppCompatActivity {
         mLayoutManager = new LinearLayoutManager(this);
         mMessagesRecyclerView.setLayoutManager(mLayoutManager);
 
+        // Set channel handler
+        SendBird.addChannelHandler(identifier, new SendBird.ChannelHandler() {
+            @Override
+            public void onMessageReceived(BaseChannel baseChannel, BaseMessage baseMessage) {
+                if (mGroupChannel != null && baseChannel.getUrl().equals(mGroupChannel.getUrl())) {
+                    Log.v(TAG, "New message received " + baseMessage.getMessageId());
+                    if (mMessagesListAdapter != null && baseMessage instanceof UserMessage) {
+                        printUserMesage((UserMessage) baseMessage);
+                        mGroupChannel.markAsRead();
+                        mMessagesListAdapter.addMessage((UserMessage) baseMessage);
+                    }
+                }
+            }
+
+            @Override
+            public void onReadReceiptUpdated(GroupChannel groupChannel) {
+                Log.v(TAG, "The read receipt has been updated for the channel " + groupChannel.getUrl());
+            }
+
+            @Override
+            public void onTypingStatusUpdated(GroupChannel groupChannel) {
+                Log.v(TAG, "The typing status has been updated for the channel " + groupChannel.getUrl());
+            }
+
+            @Override
+            public void onUserJoined(GroupChannel groupChannel, User user) {
+                Log.v(TAG, "New user joined to the channel " + groupChannel.getUrl() + ", " + user.getNickname());
+            }
+
+            @Override
+            public void onUserLeft(GroupChannel groupChannel, User user) {
+                Log.v(TAG, "User left on the channel " + groupChannel.getUrl() + ", " + user.getNickname());
+            }
+        });
+
         // Create channel
         List<String> userIdsList = new ArrayList<String>();
         userIdsList.add(mReceiverId);
@@ -87,6 +128,8 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(mContext, "" + e.getCode() + ":" + e.getMessage(), Toast.LENGTH_SHORT).show();
                     return;
                 }
+
+                mGroupChannel = groupChannel;
 
                 // Load messages
                 loadMessages(groupChannel);
@@ -111,14 +154,7 @@ public class MainActivity extends AppCompatActivity {
                 for (BaseMessage baseMessage : baseMessagesList) {
                     if (baseMessage instanceof UserMessage) {
                         UserMessage userMessage = (UserMessage) baseMessage;
-                        Log.v(TAG, "User message received {" +
-                                "Sender: " + userMessage.getSender().getNickname() +
-                                ", Message: " + userMessage.getMessage() +
-                                ", Data: " + userMessage.getData() +
-                                ", RequestId: " + userMessage.getRequestId() +
-                                ", Created at: " + userMessage.getCreatedAt() +
-                                "}"
-                        );
+                        printUserMesage(userMessage);
                         mMessagesListAdapter.addMessage(userMessage);
                     }
                 }
@@ -311,4 +347,15 @@ public class MainActivity extends AppCompatActivity {
 //            }
 //        });
 //    }
+
+    private void printUserMesage(UserMessage userMessage) {
+        Log.v(TAG, "User message {" +
+                "Sender: " + userMessage.getSender().getNickname() +
+                ", Message: " + userMessage.getMessage() +
+                ", Data: " + userMessage.getData() +
+                ", RequestId: " + userMessage.getRequestId() +
+                ", Created at: " + userMessage.getCreatedAt() +
+                "}"
+        );
+    }
 }

@@ -1,32 +1,27 @@
 package com.jiahaoliuliu.simplesendbirdtest;
 
+import android.content.Context;
+import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-//import android.os.Bundle;
-//import android.support.v7.widget.LinearLayoutManager;
-//import android.support.v7.widget.RecyclerView;
-//import android.text.TextUtils;
-//import android.util.Log;
-//import android.view.View;
-//import android.widget.Button;
-//import android.widget.EditText;
-//
-//import com.sendbird.android.MessageListQuery;
-//import com.sendbird.android.SendBird;
-//import com.sendbird.android.SendBirdEventHandler;
-//import com.sendbird.android.SendBirdNotificationHandler;
-//import com.sendbird.android.model.BroadcastMessage;
-//import com.sendbird.android.model.Channel;
-//import com.sendbird.android.model.FileLink;
-//import com.sendbird.android.model.Mention;
-//import com.sendbird.android.model.Message;
-//import com.sendbird.android.model.MessageModel;
-//import com.sendbird.android.model.MessagingChannel;
-//import com.sendbird.android.model.ReadStatus;
-//import com.sendbird.android.model.SystemMessage;
-//import com.sendbird.android.model.TypeStatus;
-//
-//import java.util.ArrayList;
-//import java.util.List;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import com.sendbird.android.BaseMessage;
+import com.sendbird.android.GroupChannel;
+import com.sendbird.android.PreviousMessageListQuery;
+import com.sendbird.android.SendBird;
+import com.sendbird.android.SendBirdException;
+import com.sendbird.android.User;
+import com.sendbird.android.UserMessage;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,55 +29,107 @@ public class MainActivity extends AppCompatActivity {
     public static final String INTENT_KEY_USER_ID = "UserId";
     public static final String INTENT_KEY_USER_NAME = "UserName";
 
-//    // Views
-//    private RecyclerView mMessagesRecyclerView;
-//    private EditText mMessageBoxEditText;
-//    private Button mViewButton;
-//
-//    // Internal variable
-//    private String mReceiverId;
-//    private String mReceiverName;
-//    private List<Message> mMessagesLit;
-//    private RecyclerView.LayoutManager mLayoutManager;
-//    private MessagesListAdapter mMessagesListAdapter;
-//
-//    @Override
-//    protected void onCreate(Bundle savedInstanceState) {
-//        super.onCreate(savedInstanceState);
-//        setContentView(R.layout.activity_main);
-//
+    // All the channels must be distinct. This will allow them to be reused and get previous messages
+    private static final boolean IS_DISTINCT = true;
+
+    // Maximum load 30 messages
+    private static final int MAXIMUM_MESSAGES_LOAD = 30;
+
+    // Views
+    private RecyclerView mMessagesRecyclerView;
+    private EditText mMessageBoxEditText;
+    private Button mViewButton;
+
+    // Internal variable
+    private Context mContext;
+    private String mReceiverId;
+    private String mReceiverName;
+    private List<UserMessage> mMessagesLit;
+    private RecyclerView.LayoutManager mLayoutManager;
+    private MessagesListAdapter mMessagesListAdapter;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
 //        registerNotificationsAndEvents();
-//
-//        // get the user Id
-//        mReceiverId = getIntent().getExtras().getString(INTENT_KEY_USER_ID);
-//        mReceiverName = getIntent().getExtras().getString(INTENT_KEY_USER_NAME);
-//        Log.v(TAG, "The receiver is " + mReceiverId + ":" + mReceiverName);
-//
-//        // Initialize internal variables
-//        mMessagesLit = new ArrayList<Message>();
-//
-//        // Link the views
-//        mMessagesRecyclerView = (RecyclerView) findViewById(R.id.messages_recycler_view);
-//        mMessageBoxEditText = (EditText) findViewById(R.id.messages_box_edit_text);
-//
-//        mViewButton = (Button) findViewById(R.id.send_button);
-//        mViewButton.setOnClickListener(mOnClickListener);
-//
-//        // Set the name of the receiver
-//        getSupportActionBar().setTitle(mReceiverName);
-//
-//        // Set the messages list layout
-//        mLayoutManager = new LinearLayoutManager(this);
-//        mMessagesRecyclerView.setLayoutManager(mLayoutManager);
-//
-//        // Start messaging
-//        SendBird.startMessaging(mReceiverId);
-//    }
-//
-//    private View.OnClickListener mOnClickListener = new View.OnClickListener(){
-//        @Override
-//        public void onClick(View view) {
-//            switch (view.getId()) {
+
+        // get the user Id
+        mReceiverId = getIntent().getExtras().getString(INTENT_KEY_USER_ID);
+        mReceiverName = getIntent().getExtras().getString(INTENT_KEY_USER_NAME);
+        Log.v(TAG, "The receiver is " + mReceiverId + ":" + mReceiverName);
+
+        // Init the variables
+        this.mContext = this;
+
+        // Link the views
+        mMessagesRecyclerView = (RecyclerView) findViewById(R.id.messages_recycler_view);
+        mMessageBoxEditText = (EditText) findViewById(R.id.messages_box_edit_text);
+
+        mViewButton = (Button) findViewById(R.id.send_button);
+        mViewButton.setOnClickListener(mOnClickListener);
+
+        // Set the name of the receiver
+        getSupportActionBar().setTitle(mReceiverName);
+
+        // Set the messages list layout
+        mLayoutManager = new LinearLayoutManager(this);
+        mMessagesRecyclerView.setLayoutManager(mLayoutManager);
+
+        // Create channel
+        List<String> userIdsList = new ArrayList<String>();
+        userIdsList.add(mReceiverId);
+        GroupChannel.createChannelWithUserIds(userIdsList, IS_DISTINCT, new GroupChannel.GroupChannelCreateHandler() {
+            @Override
+            public void onResult(GroupChannel groupChannel, SendBirdException e) {
+                if (e != null) {
+                    Toast.makeText(mContext, "" + e.getCode() + ":" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                // Load messages
+                loadMessages(groupChannel);
+            }
+        });
+    }
+
+    private void loadMessages(GroupChannel groupChannel) {
+        PreviousMessageListQuery previousMessageListQuery = groupChannel.createPreviousMessageListQuery();
+        previousMessageListQuery.load(MAXIMUM_MESSAGES_LOAD, false, new PreviousMessageListQuery.MessageListQueryResult() {
+            @Override
+            public void onResult(List<BaseMessage> baseMessagesList, SendBirdException e) {
+                if (e != null) {
+                    Toast.makeText(mContext, "" + e.getCode() + ":" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                mMessagesLit = new ArrayList<UserMessage>();
+                mMessagesListAdapter = new MessagesListAdapter(SendBird.getCurrentUser().getUserId(), mMessagesLit);
+                mMessagesRecyclerView.setAdapter(mMessagesListAdapter);
+
+                for (BaseMessage baseMessage : baseMessagesList) {
+                    if (baseMessage instanceof UserMessage) {
+                        UserMessage userMessage = (UserMessage) baseMessage;
+                        Log.v(TAG, "User message received {" +
+                                "Sender: " + userMessage.getSender().getNickname() +
+                                ", Message: " + userMessage.getMessage() +
+                                ", Data: " + userMessage.getData() +
+                                ", RequestId: " + userMessage.getRequestId() +
+                                ", Created at: " + userMessage.getCreatedAt() +
+                                "}"
+                        );
+                        mMessagesListAdapter.addMessage(userMessage);
+                    }
+                }
+            }
+        });
+    }
+
+    private View.OnClickListener mOnClickListener = new View.OnClickListener(){
+        @Override
+        public void onClick(View view) {
+            switch (view.getId()) {
 //                case R.id.send_button:
 //                    String textToSend = mMessageBoxEditText.getText().toString().trim();
 //                    if (!TextUtils.isEmpty(textToSend)) {
@@ -91,10 +138,10 @@ public class MainActivity extends AppCompatActivity {
 //                        mMessageBoxEditText.setText("");
 //                    }
 //                    break;
-//            }
-//        }
-//    };
-//
+            }
+        }
+    };
+
 //    private void registerNotificationsAndEvents() {
 //        SendBird.registerNotificationHandler(new SendBirdNotificationHandler() {
 //            @Override

@@ -6,8 +6,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import com.sendbird.android.UserMessage;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Created by jiahaoliuliu on 7/11/16.
@@ -26,83 +29,67 @@ public class MessagesListAdapter extends RecyclerView.Adapter<MessagesListAdapte
         }
     }
 
-//    // Messages type
-//    private static final int MESSAGE_TYPE_SENT = 1;
-//    private static final int MESSAGE_TYPE_RECEIVED = 2;
-//
-//    private static final String DATE_FORMAT = "dd/MM HH:mm";
-//
-//    // Internal data
-//    private List<Message> mMessagesList;
-//    private String mMyUserId;
-//    private SimpleDateFormat mDateFormatter;
-//
-//    public MessagesListAdapter(String myUserId, List<Message> messagesList) {
-//        this.mMyUserId = myUserId;
-//        this.mMessagesList = messagesList;
-//        mDateFormatter = new SimpleDateFormat(DATE_FORMAT);
-//    }
-//
-//    @Override
-//    public int getItemViewType(int position) {
-//        Message message = mMessagesList.get(position);
-//        if (mMyUserId.equals(message.getSenderId())) {
-//            return MESSAGE_TYPE_SENT;
-//        } else {
-//            return MESSAGE_TYPE_RECEIVED;
-//        }
-//    }
+    // Messages type
+    private static final int MESSAGE_TYPE_SENT = 1;
+    private static final int MESSAGE_TYPE_RECEIVED = 2;
 
-    @Override
-    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        return null;
+    private static final String DATE_FORMAT = "dd/MM HH:mm";
+
+    // Internal data
+    private List<UserMessage> mMessagesList;
+    private String mMyUserId;
+    private SimpleDateFormat mDateFormatter;
+
+    public MessagesListAdapter(String myUserId, List<UserMessage> messagesList) {
+        this.mMyUserId = myUserId;
+        this.mMessagesList = messagesList;
+        mDateFormatter = new SimpleDateFormat(DATE_FORMAT);
     }
 
     @Override
-    public void onBindViewHolder(ViewHolder holder, int position) {
-
+    public int getItemViewType(int position) {
+        UserMessage message = mMessagesList.get(position);
+        if (mMyUserId.equals(message.getSender().getUserId())) {
+            return MESSAGE_TYPE_SENT;
+        } else {
+            return MESSAGE_TYPE_RECEIVED;
+        }
     }
 
     @Override
     public int getItemCount() {
-//        return mMessagesList.size();
-        return 0;
+        return mMessagesList.size();
     }
-//
-//    @Override
-//    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-//        int layoutId;
-//        switch (viewType) {
-//            case MESSAGE_TYPE_SENT:
-//                layoutId = R.layout.sent_message_layout;
-//                break;
-//            default:
-//            case MESSAGE_TYPE_RECEIVED:
-//                layoutId = R.layout.received_message_layout;
-//                break;
-//        }
-//
-//        View v = LayoutInflater.from(parent.getContext())
-//                .inflate(layoutId, parent, false);
-//        ViewHolder vh = new ViewHolder(v);
-//        return vh;
-//
-//    }
-//
-//    @Override
-//    public void onBindViewHolder(ViewHolder holder, int position) {
-//        Message message = mMessagesList.get(position);
-//        holder.mMessagesTextView.setText(message.getMessage());
-//        holder.mDateTextView.setText(mDateFormatter.format(new Date(message.getTimestamp())));
-//    }
-//
-//    public void addMessage(Message message) {
-//        if (message.isPast()) {
-//            mMessagesList.add(0, message);
-//        } else {
-//            mMessagesList.add(message);
-//        }
-//
-//        notifyDataSetChanged();
-//    }
+
+    @Override
+    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        int layoutId;
+        switch (viewType) {
+            case MESSAGE_TYPE_SENT:
+                layoutId = R.layout.sent_message_layout;
+                break;
+            default:
+            case MESSAGE_TYPE_RECEIVED:
+                layoutId = R.layout.received_message_layout;
+                break;
+        }
+
+        View v = LayoutInflater.from(parent.getContext())
+                .inflate(layoutId, parent, false);
+        ViewHolder vh = new ViewHolder(v);
+        return vh;
+
+    }
+
+    @Override
+    public void onBindViewHolder(ViewHolder holder, int position) {
+        UserMessage message = mMessagesList.get(position);
+        holder.mMessagesTextView.setText(message.getMessage());
+        holder.mDateTextView.setText(mDateFormatter.format(new Date(message.getCreatedAt())));
+    }
+
+    public void addMessage(UserMessage message) {
+        mMessagesList.add(message);
+        notifyDataSetChanged();
+    }
 }

@@ -21,7 +21,6 @@ import com.sendbird.android.SendBirdException;
 import com.sendbird.android.User;
 import com.sendbird.android.UserMessage;
 
-import java.security.acl.Group;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -83,16 +82,38 @@ public class MainActivity extends AppCompatActivity {
         mLayoutManager = new LinearLayoutManager(this);
         mMessagesRecyclerView.setLayoutManager(mLayoutManager);
 
-        // Set channel handler
+        // Create channel
+        List<String> userIdsList = new ArrayList<String>();
+        userIdsList.add(mReceiverId);
+        GroupChannel.createChannelWithUserIds(userIdsList, IS_DISTINCT, new GroupChannel.GroupChannelCreateHandler() {
+            @Override
+            public void onResult(GroupChannel groupChannel, SendBirdException e) {
+                if (e != null) {
+                    Toast.makeText(mContext, "" + e.getCode() + ":" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                mGroupChannel = groupChannel;
+
+                setGeneralChannelHandler();
+                // Load messages
+                loadMessages(groupChannel);
+            }
+        });
+    }
+
+    private void setGeneralChannelHandler() {
         SendBird.addChannelHandler(identifier, new SendBird.ChannelHandler() {
             @Override
             public void onMessageReceived(BaseChannel baseChannel, BaseMessage baseMessage) {
+                Log.v(TAG, "New message received " + baseMessage.getMessageId());
                 if (mGroupChannel != null && baseChannel.getUrl().equals(mGroupChannel.getUrl())) {
-                    Log.v(TAG, "New message received " + baseMessage.getMessageId());
                     if (mMessagesListAdapter != null && baseMessage instanceof UserMessage) {
                         printUserMesage((UserMessage) baseMessage);
                         mGroupChannel.markAsRead();
                         mMessagesListAdapter.addMessage((UserMessage) baseMessage);
+                        // Move the list to the last item
+                        mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
                     }
                 }
             }
@@ -117,24 +138,6 @@ public class MainActivity extends AppCompatActivity {
                 Log.v(TAG, "User left on the channel " + groupChannel.getUrl() + ", " + user.getNickname());
             }
         });
-
-        // Create channel
-        List<String> userIdsList = new ArrayList<String>();
-        userIdsList.add(mReceiverId);
-        GroupChannel.createChannelWithUserIds(userIdsList, IS_DISTINCT, new GroupChannel.GroupChannelCreateHandler() {
-            @Override
-            public void onResult(GroupChannel groupChannel, SendBirdException e) {
-                if (e != null) {
-                    Toast.makeText(mContext, "" + e.getCode() + ":" + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                mGroupChannel = groupChannel;
-
-                // Load messages
-                loadMessages(groupChannel);
-            }
-        });
     }
 
     private void loadMessages(GroupChannel groupChannel) {
@@ -157,6 +160,9 @@ public class MainActivity extends AppCompatActivity {
                         printUserMesage(userMessage);
                         mMessagesListAdapter.addMessage(userMessage);
                     }
+
+                // Move the list to the last item
+                mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
                 }
             }
         });
@@ -166,187 +172,31 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onClick(View view) {
             switch (view.getId()) {
-//                case R.id.send_button:
-//                    String textToSend = mMessageBoxEditText.getText().toString().trim();
-//                    if (!TextUtils.isEmpty(textToSend)) {
-//                        SendBird.send(textToSend);
-//                        Log.v(TAG, "Sending message to " + mReceiverName + ":" + textToSend);
-//                        mMessageBoxEditText.setText("");
-//                    }
-//                    break;
+                case R.id.send_button:
+                    final String textToSend = mMessageBoxEditText.getText().toString().trim();
+                    if (!TextUtils.isEmpty(textToSend)) {
+                        mGroupChannel.sendUserMessage(textToSend, new BaseChannel.SendUserMessageHandler() {
+                            @Override
+                            public void onSent(UserMessage userMessage, SendBirdException e) {
+                                if (e != null) {
+                                    Toast.makeText(mContext, "" + e.getCode() + ":" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+
+                                Log.v(TAG, "Message sent to" + mReceiverName + ":" + textToSend);
+                                mMessageBoxEditText.setText("");
+
+                                // Update the users list
+                                mMessagesListAdapter.addMessage(userMessage);
+                                // Move the list to the last item
+                                mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
+                            }
+                        });
+                    }
+                    break;
             }
         }
     };
-
-//    private void registerNotificationsAndEvents() {
-//        SendBird.registerNotificationHandler(new SendBirdNotificationHandler() {
-//            @Override
-//            public void onMessagingChannelUpdated(MessagingChannel messagingChannel) {
-//                Log.v(TAG, "Messaging channel updated " + messagingChannel.getId());
-//            }
-//
-//            @Override
-//            public void onMentionUpdated(Mention mention) {
-//                Log.v(TAG, "Mention " + mention);
-//            }
-//        });
-//
-//        SendBird.setEventHandler(new SendBirdEventHandler() {
-//            @Override
-//            public void onConnect(Channel channel) {
-//                Log.v(TAG, "Channel connected " + channel.getId());
-//            }
-//
-//            @Override
-//            public void onError(int code) {
-//                Log.e("SendBird", "Error code: " + code);
-//            }
-//
-//            @Override
-//            public void onChannelLeft(Channel channel) {
-//                Log.v(TAG, "Channel left " + channel);
-//            }
-//
-//            @Override
-//            public void onMessageReceived(Message message) {
-//                Log.v(TAG, "Message received :\n" +
-//                        "\tSender Id" + message.getSenderId() + ",\n" +
-//                        "\tSender name: " + message.getSenderName() + ",\n" +
-//                        "\tSenderImageUrl: " + message.getSenderImageUrl() + ",\n" +
-//                        "\tMessage Id: " + message.getMessageId() + ",\n" +
-//                        "\tMessage:" + message.getMessage() + ",\n" +
-//                        "\tData: " + message.getData() + ",\n" +
-//                        "\tTmp Id: " + message.getTempId() + ",\n" +
-//                        "\tChannel Id: " + message.getChannelId() + ",\n" +
-//                        "\tTimeStamp Id: " + message.getTimestamp() + ",\n");
-//
-//                mMessagesListAdapter.addMessage(message);
-//                // Move the list to the last item
-//                mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
-//            }
-//
-//            @Override
-//            public void onMutedMessageReceived(Message message) {
-//                Log.v(TAG, "Muted message received " + message);
-//            }
-//
-//            @Override
-//            public void onSystemMessageReceived(SystemMessage systemMessage) {
-//                switch (systemMessage.getCategory()) {
-//                    case SystemMessage.CATEGORY_TOO_MANY_MESSAGES:
-//                        Log.v(TAG, "Too many messages. Please try later.");
-//                        break;
-//                    case SystemMessage.CATEGORY_MESSAGING_USER_BLOCKED:
-//                        Log.v(TAG, "Blocked.");
-//                        break;
-//                    case SystemMessage.CATEGORY_MESSAGING_USER_DEACTIVATED:
-//                        Log.v(TAG, "Deactivated.");
-//                        break;
-//                }
-//
-//            }
-//
-//            @Override
-//            public void onBroadcastMessageReceived(BroadcastMessage broadcastMessage) {
-//                Log.v(TAG, "Boradcase message received " + broadcastMessage);
-//            }
-//
-//            @Override
-//            public void onFileReceived(FileLink fileLink) {
-//                Log.v(TAG, "File received");
-//            }
-//
-//            @Override
-//            public void onMutedFileReceived(FileLink fileLink) {
-//                Log.v(TAG, "Muted file received " + fileLink);
-//            }
-//
-//            @Override
-//            public void onReadReceived(ReadStatus readStatus) {
-//                Log.v(TAG, "Read status received " + readStatus);
-//            }
-//
-//            @Override
-//            public void onTypeStartReceived(TypeStatus typeStatus) {
-//                Log.v(TAG, "Type status start received " + typeStatus);
-//            }
-//
-//            @Override
-//            public void onTypeEndReceived(TypeStatus typeStatus) {
-//                Log.v(TAG, "Type status end received " + typeStatus);
-//            }
-//
-//            @Override
-//            public void onAllDataReceived(SendBird.SendBirdDataType type, int count) {
-//                Log.v(TAG, "All date received " + type + " " + count);
-//            }
-//
-//            @Override
-//            public void onMessageDelivery(boolean sent, String message, String data, String tempId) {
-//                Log.v(TAG, "Message deliveried " + sent + " " + message + " " + data + " " + tempId);
-//            }
-//
-//            @Override
-//            public void onMessagingStarted(final MessagingChannel messagingChannel) {
-//                Log.v(TAG, "Message started " + messagingChannel.getId());
-//
-//                mMessagesListAdapter = new MessagesListAdapter(SendBird.getUserId(), mMessagesLit);
-//                mMessagesRecyclerView.setAdapter(mMessagesListAdapter);
-//
-//                SendBird.queryMessageList(messagingChannel.getUrl()).load(Long.MAX_VALUE, 30, 10, new MessageListQuery.MessageListQueryResult() {
-//                    @Override
-//                    public void onResult(List<MessageModel> messageModels) {
-//                        for (MessageModel model : messageModels) {
-//                            Log.v(TAG, "Message model " + model.getMessageId());
-//                            if (model instanceof Message) {
-//                                Log.v(TAG, "The message model is also instance of Message" + model.getMessageId());
-//                                mMessagesListAdapter.addMessage((Message) model);
-//                            } else {
-//                                Log.v(TAG, "The message model is not instance of Message " + model.getMessageId());
-//                            }
-//                        }
-//
-//                        // Move the list to the last item
-//                        mMessagesRecyclerView.smoothScrollToPosition(mMessagesListAdapter.getItemCount());
-//
-//                        SendBird.markAsRead(messagingChannel.getUrl());
-//                        SendBird.join(messagingChannel.getUrl());
-//                        SendBird.connect();
-//                    }
-//
-//                    @Override
-//                    public void onError(Exception e) {
-//                        Log.e(TAG, "Error starting the messaging ", e);
-//                    }
-//                });
-//            }
-//
-//            @Override
-//            public void onMessagingUpdated(MessagingChannel messagingChannel) {
-//                Log.v(TAG, "Messaging updated " + messagingChannel);
-//            }
-//
-//            @Override
-//            public void onMessagingEnded(MessagingChannel messagingChannel) {
-//                Log.v(TAG, "Messageing ended " + messagingChannel);
-//            }
-//
-//            @Override
-//            public void onAllMessagingEnded() {
-//                Log.v(TAG, "All messaging ended");
-//            }
-//
-//            @Override
-//            public void onMessagingHidden(MessagingChannel messagingChannel) {
-//                Log.v(TAG, "Messaging hidden " + messagingChannel);
-//            }
-//
-//            @Override
-//            public void onAllMessagingHidden() {
-//                Log.v(TAG, "All messaging hidden ");
-//            }
-//        });
-//    }
 
     private void printUserMesage(UserMessage userMessage) {
         Log.v(TAG, "User message {" +

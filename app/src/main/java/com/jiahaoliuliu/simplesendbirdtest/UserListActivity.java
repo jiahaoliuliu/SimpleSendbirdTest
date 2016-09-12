@@ -89,6 +89,9 @@ public class UserListActivity extends AppCompatActivity {
                     String [] userNames = new String[users.size()];
                     for(int i = 0; i < userNames.length; i++) {
                         userNames[i] = users.get(i).getNickname();
+                        if (users.get(i).getUserId().equals(mUserId)) {
+                            getSupportActionBar().setTitle(userNames[i]);
+                        }
                     }
 
                     ArrayAdapter<String> adapter = new ArrayAdapter<String>(mContext,

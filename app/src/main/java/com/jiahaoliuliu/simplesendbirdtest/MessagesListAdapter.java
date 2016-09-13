@@ -6,8 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.sendbird.android.model.Message;
-import com.sendbird.android.model.MessageModel;
+import com.sendbird.android.UserMessage;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -37,11 +36,11 @@ public class MessagesListAdapter extends RecyclerView.Adapter<MessagesListAdapte
     private static final String DATE_FORMAT = "dd/MM HH:mm";
 
     // Internal data
-    private List<Message> mMessagesList;
+    private List<UserMessage> mMessagesList;
     private String mMyUserId;
     private SimpleDateFormat mDateFormatter;
 
-    public MessagesListAdapter(String myUserId, List<Message> messagesList) {
+    public MessagesListAdapter(String myUserId, List<UserMessage> messagesList) {
         this.mMyUserId = myUserId;
         this.mMessagesList = messagesList;
         mDateFormatter = new SimpleDateFormat(DATE_FORMAT);
@@ -49,8 +48,8 @@ public class MessagesListAdapter extends RecyclerView.Adapter<MessagesListAdapte
 
     @Override
     public int getItemViewType(int position) {
-        Message message = mMessagesList.get(position);
-        if (mMyUserId.equals(message.getSenderId())) {
+        UserMessage message = mMessagesList.get(position);
+        if (mMyUserId.equals(message.getSender().getUserId())) {
             return MESSAGE_TYPE_SENT;
         } else {
             return MESSAGE_TYPE_RECEIVED;
@@ -84,18 +83,13 @@ public class MessagesListAdapter extends RecyclerView.Adapter<MessagesListAdapte
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        Message message = mMessagesList.get(position);
+        UserMessage message = mMessagesList.get(position);
         holder.mMessagesTextView.setText(message.getMessage());
-        holder.mDateTextView.setText(mDateFormatter.format(new Date(message.getTimestamp())));
+        holder.mDateTextView.setText(mDateFormatter.format(new Date(message.getCreatedAt())));
     }
 
-    public void addMessage(Message message) {
-        if (message.isPast()) {
-            mMessagesList.add(0, message);
-        } else {
-            mMessagesList.add(message);
-        }
-
+    public void addMessage(UserMessage message) {
+        mMessagesList.add(message);
         notifyDataSetChanged();
     }
 }

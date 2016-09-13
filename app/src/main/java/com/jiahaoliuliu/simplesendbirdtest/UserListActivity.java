@@ -10,25 +10,12 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.SimpleAdapter;
+import android.widget.Toast;
 
-import com.sendbird.android.MessageListQuery;
 import com.sendbird.android.SendBird;
-import com.sendbird.android.SendBirdEventHandler;
 import com.sendbird.android.SendBirdException;
-import com.sendbird.android.SendBirdNotificationHandler;
+import com.sendbird.android.User;
 import com.sendbird.android.UserListQuery;
-import com.sendbird.android.model.BroadcastMessage;
-import com.sendbird.android.model.Channel;
-import com.sendbird.android.model.FileLink;
-import com.sendbird.android.model.Mention;
-import com.sendbird.android.model.Message;
-import com.sendbird.android.model.MessageModel;
-import com.sendbird.android.model.MessagingChannel;
-import com.sendbird.android.model.ReadStatus;
-import com.sendbird.android.model.SystemMessage;
-import com.sendbird.android.model.TypeStatus;
-import com.sendbird.android.model.User;
 
 import java.security.MessageDigest;
 import java.util.List;
@@ -61,28 +48,50 @@ public class UserListActivity extends AppCompatActivity {
         mUserId = generateDeviceUUID(mContext);
         Log.v(TAG, "The user id is " + mUserId);
         final String userName = "User-" + mUserId.substring(0, 5);
-        SendBird.init(mContext, APIKeys.SEND_BIRD_APP_ID);
-        SendBird.login(SendBird.LoginOption.build(mUserId).setUserName(userName).setGCMRegToken(""));
+        SendBird.init(APIKeys.SEND_BIRD_APP_ID, mContext);
+        SendBird.connect(mUserId, new SendBird.ConnectHandler() {
+            @Override
+            public void onConnected(User user, SendBirdException e) {
+                if (e != null) {
+                    Toast.makeText(UserListActivity.this, "" + e.getCode() + ":" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
+                Toast.makeText(UserListActivity.this, "The app has connected", Toast.LENGTH_SHORT).show();
+
+                // Fill users list
+                fillUsersList();
+            }
+        });
+    }
+
+    private void fillUsersList() {
         // Get the list of users
-        mUserListQuery = SendBird.queryUserList();
+        mUserListQuery = SendBird.createUserListQuery();
         mUserListQuery.setLimit(30);
 
         if(mUserListQuery != null && mUserListQuery.hasNext() && !mUserListQuery.isLoading()) {
-            mUserListQuery.next(new UserListQuery.UserListQueryResult() {
+            mUserListQuery.next(new UserListQuery.UserListQueryResultHandler() {
                 @Override
-                public void onResult(final List<User> users) {
+                public void onResult(List<User> users, SendBirdException e) {
+                    if (e != null) {
+                        Toast.makeText(mContext, "" + e.getCode() + ":" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     // Get the user list
                     Log.v(TAG, "The list of users is ");
                     for (User user : users) {
-                        Log.v(TAG, user.getId() + ":" + user.getName());
+                        Log.v(TAG, user.getUserId() + ":" + user.getNickname());
                     }
 
                     // Get the list of users
                     mUsersList = users;
                     String [] userNames = new String[users.size()];
                     for(int i = 0; i < userNames.length; i++) {
-                        userNames[i] = users.get(i).getName();
+                        userNames[i] = users.get(i).getNickname();
+                        if (users.get(i).getUserId().equals(mUserId)) {
+                            getSupportActionBar().setTitle(userNames[i]);
+                        }
                     }
 
                     ArrayAdapter<String> adapter = new ArrayAdapter<String>(mContext,
@@ -94,19 +103,14 @@ public class UserListActivity extends AppCompatActivity {
                         @Override
                         public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                             User userSelected = mUsersList.get(i);
-                            Log.v(TAG, "The user has selected " + userSelected.getId() + ":" + userSelected.getName());
+                            Log.v(TAG, "The user has selected " + userSelected.getUserId() + ":" + userSelected.getNickname());
 
                             Intent intent = new Intent(mContext, MainActivity.class);
-                            intent.putExtra(MainActivity.INTENT_KEY_USER_ID, userSelected.getId());
-                            intent.putExtra(MainActivity.INTENT_KEY_USER_NAME, userSelected.getName());
+                            intent.putExtra(MainActivity.INTENT_KEY_USER_ID, userSelected.getUserId());
+                            intent.putExtra(MainActivity.INTENT_KEY_USER_NAME, userSelected.getNickname());
                             startActivity(intent);
                         }
                     });
-                }
-
-                @Override
-                public void onError(SendBirdException e) {
-                    Log.e(TAG, "Error on getting the users list ", e);
                 }
             });
         }

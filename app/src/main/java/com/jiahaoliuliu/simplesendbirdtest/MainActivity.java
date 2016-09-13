@@ -58,8 +58,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        registerNotificationsAndEvents();
-
         // get the user Id
         mReceiverId = getIntent().getExtras().getString(INTENT_KEY_USER_ID);
         mReceiverName = getIntent().getExtras().getString(INTENT_KEY_USER_NAME);
@@ -173,6 +171,11 @@ public class MainActivity extends AppCompatActivity {
         public void onClick(View view) {
             switch (view.getId()) {
                 case R.id.send_button:
+                    if (mGroupChannel == null) {
+                        Log.i(TAG, "The group channel must be ready when the user want to send the message");
+                        return;
+                    }
+
                     final String textToSend = mMessageBoxEditText.getText().toString().trim();
                     if (!TextUtils.isEmpty(textToSend)) {
                         mGroupChannel.sendUserMessage(textToSend, new BaseChannel.SendUserMessageHandler() {
